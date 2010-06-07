@@ -1,20 +1,26 @@
-(ns cassandra.core)
+(ns cassandra.core
+  (:import
+    (org.apache.cassandra.thrift
+         ConsistencyLevel Cassandra$Client ColumnPath)
+    (org.apache.thrift.transport TSocket)
+    (org.apache.thrift.protocol TBinaryProtocol)))
 
 (def encoding "UTF-8")
-(def clevel org.apache.cassandra.thrift.ConsistencyLevel/ONE)
+(def clevel ConsistencyLevel/ONE)
 
 (def *host* "localhost")
 (def *port* 9160)
 (def *keyspace* "Keyspace1")
 
 (defmacro with-client [[client [host port]] & body]
-  `(let [socket# (org.apache.thrift.transport.TSocket. ~host ~port)
-         protocol# (org.apache.thrift.protocol.TBinaryProtocol. socket#)
-         ~'client (org.apache.cassandra.thrift.Cassandra$Client. protocol#)]
+  `(let [socket# (TSocket. ~host ~port)
+         protocol# (TBinaryProtocol. socket#)
+         ~'client (Cassandra$Client. protocol#)]
      (with-open [transport# socket#]
        (.open transport#)
        ~@body)))
 
+; TODO: move translation methods to another ns
 (defn bytes->str [bytes]
   (String. bytes encoding))
 
@@ -22,7 +28,7 @@
   (.getBytes s encoding))
 
 (defn make-column-path [family column]
-  (doto (org.apache.cassandra.thrift.ColumnPath. family)
+  (doto (ColumnPath. family)
     (.setColumn (str->bytes column))))
 
 (defn get-generic [family k col]
