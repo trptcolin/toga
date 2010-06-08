@@ -61,17 +61,20 @@
   (doto (SlicePredicate.)
     (.setSlice_range (make-slice-range))))
 
+(defn get-slice [& args]
+  `(.get_slice ~@args))
+
 ; naive - ignores SuperColumn
 (defn get-record [column-family k]
   (let [parent (ColumnParent. column-family)]
-    ;(map
-    ;  #(column->map (.getColumn %))
-      (.get_slice *client*
+    (map
+      #(column->map (.getColumn %))
+      (get-slice *client*
                   *keyspace*
                   k
                   parent
                   (make-slice-predicate)
-                  consistency-level)));)
+                  consistency-level))))
 
 (defn delete-record [column-family k col]
   (.remove *client*

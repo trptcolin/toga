@@ -2,7 +2,10 @@
   (:use clojure.test))
 
 (def test-nses
-  ['util.string-test])
+  [
+   'cassandra.core-test
+   'util.string-test
+   ])
 
 (doall
   (map #(use %) test-nses))
