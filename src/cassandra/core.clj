@@ -1,4 +1,5 @@
 (ns cassandra.core
+  (:use util.string)
   (:import
     (org.apache.cassandra.thrift
          ConsistencyLevel Cassandra$Client ColumnPath
@@ -6,8 +7,7 @@
     (org.apache.thrift.transport TSocket)
     (org.apache.thrift.protocol TBinaryProtocol)))
 
-(def encoding "UTF-8")
-(def clevel ConsistencyLevel/ONE)
+(def consistency-level ConsistencyLevel/ONE)
 
 (def *client*)
 (def *keyspace*)
@@ -21,19 +21,14 @@
          (.open transport#)
          ~@body))))
 
-; TODO: move translation methods to another ns
-(defn bytes->str [bytes]
-  (String. bytes encoding))
-
-(defn str->bytes [s]
-  (.getBytes s encoding))
-
-(defn make-column-path [family column]
-  (doto (ColumnPath. family)
-    (.setColumn (str->bytes column))))
+(defn make-column-path
+  ([family] (ColumnPath. family))
+  ([family column]
+    (doto (make-column-path family)
+      (.setColumn (str->bytes column)))))
 
 (defn get-generic [family k col]
-  (.get *client* *keyspace* k (make-column-path family col) clevel))
+  (.get *client* *keyspace* k (make-column-path family col) consistency-level))
 
 (defn column->map [col]
     {:name (bytes->str (.getName col)),
@@ -55,26 +50,34 @@
     (make-column-path family col)
     (str->bytes value)
     (System/currentTimeMillis)
-    clevel))
+    consistency-level))
 
 (defn make-slice-range []
   (doto (SliceRange.)
     (.setStart (byte-array 0))
     (.setFinish (byte-array 0))))
 
-(defn make-slice-predicate [slice-range]
+(defn make-slice-predicate []
   (doto (SlicePredicate.)
-    (.setSlice_range slice-range)))
+    (.setSlice_range (make-slice-range))))
 
 ; naive - ignores SuperColumn
-(defn get-row [column-family k]
+(defn get-record [column-family k]
   (let [parent (ColumnParent. column-family)]
-    (map
-      #(column->map (.getColumn %))
+    ;(map
+    ;  #(column->map (.getColumn %))
       (.get_slice *client*
                   *keyspace*
                   k
                   parent
-                  (make-slice-predicate (make-slice-range))
-                  clevel))))
+                  (make-slice-predicate)
+                  consistency-level)));)
+
+(defn delete-record [column-family k col]
+  (.remove *client*
+           *keyspace*
+           k
+           (make-column-path column-family col)
+           (System/currentTimeMillis)
+           consistency-level))
 
