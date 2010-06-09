@@ -3,7 +3,8 @@
   (:import
     (org.apache.cassandra.thrift
          ConsistencyLevel Cassandra$Client ColumnPath
-         SlicePredicate SliceRange ColumnParent)
+         SlicePredicate SliceRange ColumnParent
+         KeyRange)
     (org.apache.thrift.transport TSocket)
     (org.apache.thrift.protocol TBinaryProtocol)))
 
@@ -20,6 +21,49 @@
        (with-open [transport# socket#]
          (.open transport#)
          ~@body))))
+
+(defn get-current-microseconds []
+  (long (* (System/currentTimeMillis) 1000)))
+
+(defn column->map [col]
+    {:name (bytes->str (.getName col)),
+     :value (bytes->str (.getValue col))
+     :timestamp (.getTimestamp col)})
+
+(defn make-slice-range []
+  (doto (SliceRange.)
+    (.setStart (byte-array 0))
+    (.setFinish (byte-array 0))))
+
+(defn make-slice-predicate []
+  (doto (SlicePredicate.)
+    (.setSlice_range (make-slice-range))))
+
+(defn make-key-range
+  ([] (KeyRange.))
+  ([start end] (doto (make-key-range) (.setStart_key start) (.setEnd_key end))))
+
+
+(defn get-range-slices [keyspace column-family]
+  (.get_range_slices
+    *client*
+    keyspace
+    (ColumnParent. column-family)
+    (make-slice-predicate)
+    (make-key-range "" "")
+    consistency-level))
+
+(defn get-records-in-column-family [keyspace cf]
+  (map
+    (fn [row] {:column-family cf :key (.getKey row) :columns (.getColumns row)})
+    (get-range-slices keyspace cf)))
+
+(defn get-columns-in-record [record]
+  (doall
+    (map
+      (fn [column]
+        (column->map (.getColumn column)))
+      (:columns record))))
 
 (defn describe-keyspaces []
   (.describe_keyspaces *client*))
@@ -42,11 +86,6 @@
 (defn get-generic [family k col]
   (.get *client* *keyspace* k (make-column-path family col) consistency-level))
 
-(defn column->map [col]
-    {:name (bytes->str (.getName col)),
-     :value (bytes->str (.getValue col))
-     :timestamp (.getTimestamp col)})
-
 ; Usage:
 ; (with-client [client ["localhost" 9160 "Keyspace1"]]
 ;   (get-column "Standard1" "ccc" "celery"))
@@ -61,17 +100,8 @@
     k
     (make-column-path family col)
     (str->bytes value)
-    (System/currentTimeMillis)
+    (get-current-microseconds)
     consistency-level))
-
-(defn make-slice-range []
-  (doto (SliceRange.)
-    (.setStart (byte-array 0))
-    (.setFinish (byte-array 0))))
-
-(defn make-slice-predicate []
-  (doto (SlicePredicate.)
-    (.setSlice_range (make-slice-range))))
 
 ; naive - ignores SuperColumn
 ; TODO: cache keyspaces to eliminate network calls + above
@@ -100,7 +130,25 @@
   (.remove *client*
            *keyspace*
            k
-           (make-column-path column-family col)
-           (System/currentTimeMillis)
+           (if col (make-column-path column-family col) (make-column-path column-family))
+           (get-current-microseconds)
            consistency-level))
+
+(defn clear-column-family [keyspace column-family]
+  (let [records-by-cf (get-records-in-column-family keyspace column-family)]
+    (doall
+      (map
+        (fn [record]
+          (binding [*keyspace* keyspace]
+            (delete-record (:column-family record) (:key record) (:column record))))
+        records-by-cf))))
+
+(defn clear-keyspace [keyspace]
+  (let [cfs (keys (describe-keyspace keyspace))]
+    (doall
+      (map
+        (fn [cf]
+          (clear-column-family keyspace cf))
+        cfs))))
+
 

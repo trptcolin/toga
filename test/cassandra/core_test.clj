@@ -2,35 +2,40 @@
   (:use cassandra.core
         cassandra.test-helper
         clojure.test
-        clojure.contrib.mock)
-  (:import (org.apache.cassandra.thrift ColumnParent)))
+        clojure.contrib.mock))
 
-(test-cassandra describing-existing-keyspaces
-  (let [keyspaces (seq (describe-keyspaces))]
-    (is (= "system" (some #{"system"} keyspaces)))
-    (is (= "Keyspace1" (some #{"Keyspace1"} keyspaces)))))
+(test-cassandra core-functionality
+  (clear-keyspace "CassandraClojureTestKeyspace1")
+  (clear-keyspace "CassandraClojureTestKeyspace2")
 
-(test-cassandra getting-keyspaces
-  (is (= ["JournalColonel" "Keyspace1" "system"]
-         (sort (get-all-keyspaces)))))
+  (testing "describing-existing-keyspaces"
+    (let [keyspaces (seq (describe-keyspaces))]
+      (is (= "system" (some #{"system"} keyspaces)))
+      (is (= "Keyspace1" (some #{"Keyspace1"} keyspaces)))))
 
-(test-cassandra describing-nonexistent-keyspace
-  (is (= nil (describe-keyspace "imaginary-keyspace"))))
+  (testing "getting-keyspaces"
+    (let [keyspaces (get-all-keyspaces)]
+      (is (= "CassandraClojureTestKeyspace1" (some #{"CassandraClojureTestKeyspace1"} keyspaces)))
+      (is (= "CassandraClojureTestKeyspace2" (some #{"CassandraClojureTestKeyspace2"} keyspaces)))))
 
-(test-cassandra describing-existing-keyspace
-  (let [keyspace (describe-keyspace "Keyspace1")]
-    (is (= ["Standard1" "Standard2" "StandardByUUID1" "Super1" "Super2"]
-           (sort (keys keyspace))))))
+  (testing "describing-nonexistent-keyspace"
+    (is (= nil (describe-keyspace "imaginary-keyspace"))))
 
-(test-cassandra getting-empty-record-with-real-column-family
-  (is (= []
-         (get-record "Standard1" "bogus_key"))))
+  (testing "describing-existing-keyspace"
+    (let [keyspace (describe-keyspace "Keyspace1")]
+      (is (= ["Standard1" "Standard2" "StandardByUUID1" "Super1" "Super2"]
+             (sort (keys keyspace))))))
 
-(test-cassandra getting-empty-record-with-nonexistent-column-family
-  (is (= nil
-         (get-record "imaginary_column_family" "bogus_key"))))
+  (testing "getting-empty-record-with-real-column-family"
+    (is (= []
+           (get-record "Standard1" "bogus_key"))))
 
-(test-cassandra getting-existing-record
-  (is (= [{:name "dog" :value "Molly"} {:name "dog2" :value "Oscar"}
-          {:name "name" :value "colin"} {:name "wifey" :value "kathy"}]
-         (no-timestamps (get-record "Standard1" "ccc")))))
+  (testing "getting-empty-record-with-nonexistent-column-family"
+    (is (= nil
+           (get-record "imaginary_column_family" "bogus_key"))))
+
+  (testing "getting-existing-record"
+    (is (= [{:name "dog" :value "Molly"} {:name "dog2" :value "Oscar"}
+            {:name "name" :value "colin"} {:name "wifey" :value "kathy"}]
+           (no-timestamps (get-record "Standard1" "ccc")))))
+)
