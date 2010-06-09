@@ -5,5 +5,5 @@ for f in lib/*.jar; do
     CLASSPATH=$CLASSPATH:$f
 done
 
-java -Xmx1G -cp $CLASSPATH clojure.main script/test.clj
+rlwrap java -Xmx1G -cp $CLASSPATH clojure.main -i script/test.clj #-r
 

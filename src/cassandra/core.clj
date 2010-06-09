@@ -21,6 +21,18 @@
          (.open transport#)
          ~@body))))
 
+(defn describe-keyspaces []
+  (.describe_keyspaces *client*))
+
+(defn get-all-keyspaces []
+  (vec (describe-keyspaces)))
+
+; TODO: cache get-all-keyspaces lookup
+(defn describe-keyspace [keyspace]
+  (if (some #{keyspace} (get-all-keyspaces))
+    (.describe_keyspace *client* keyspace)
+    nil))
+
 (defn make-column-path
   ([family] (ColumnPath. family))
   ([family column]
@@ -61,20 +73,28 @@
   (doto (SlicePredicate.)
     (.setSlice_range (make-slice-range))))
 
-(defn get-slice [& args]
-  `(.get_slice ~@args))
-
 ; naive - ignores SuperColumn
+; TODO: cache keyspaces to eliminate network calls + above
+
+(defn column-family-exists? [column-family]
+  (some #{column-family}
+        (keys (describe-keyspace *keyspace*))))
+
 (defn get-record [column-family k]
-  (let [parent (ColumnParent. column-family)]
-    (map
-      #(column->map (.getColumn %))
-      (get-slice *client*
-                  *keyspace*
-                  k
-                  parent
-                  (make-slice-predicate)
-                  consistency-level))))
+    (if (column-family-exists? column-family)
+      (let [parent (ColumnParent. column-family)]
+        (map
+          #(column->map (.getColumn %))
+          (.get_slice *client*
+            *keyspace*
+            k
+            parent
+            (make-slice-predicate)
+            consistency-level)))
+      nil))
+
+(defn no-timestamps [record]
+  (map #(dissoc % :timestamp) record))
 
 (defn delete-record [column-family k col]
   (.remove *client*
