@@ -6,7 +6,7 @@
 (defmacro test-cassandra [test-name & body]
   `(deftest ~test-name
      (try
-       (with-client ["localhost" 9160 "Keyspace1"]
+       (with-client ["localhost" 9160]
          ~@body)
        (catch TTransportException ~'e
          (println "\n\n ==========\n|\n|"

@@ -1,41 +1,72 @@
 (ns cassandra.core-test
   (:use cassandra.core
         cassandra.test-helper
-        clojure.test
-        clojure.contrib.mock))
+        clojure.test))
+
 
 (test-cassandra core-functionality
+  ; TODO: Right now there's a manual step to create these keyspaces
+  ;       It should be automatic (maybe a prompt if they already exist?)
+  ;       This will probably mean running a script that populates the storage-conf.xml
+  ;       Should it pull the test keyspaces back out at the end of the test run?
+  ;       Should the tests fire up the Cassanda server automatically?
   (clear-keyspace "CassandraClojureTestKeyspace1")
   (clear-keyspace "CassandraClojureTestKeyspace2")
 
-  (testing "describing-existing-keyspaces"
-    (let [keyspaces (seq (describe-keyspaces))]
-      (is (= "system" (some #{"system"} keyspaces)))
-      (is (= "Keyspace1" (some #{"Keyspace1"} keyspaces)))))
-
-  (testing "getting-keyspaces"
+  (testing "get-all-keyspaces"
     (let [keyspaces (get-all-keyspaces)]
-      (is (= "CassandraClojureTestKeyspace1" (some #{"CassandraClojureTestKeyspace1"} keyspaces)))
-      (is (= "CassandraClojureTestKeyspace2" (some #{"CassandraClojureTestKeyspace2"} keyspaces)))))
+      (is (= "CassandraClojureTestKeyspace1"
+             (some #{"CassandraClojureTestKeyspace1"} keyspaces)))
+      (is (= "CassandraClojureTestKeyspace2"
+             (some #{"CassandraClojureTestKeyspace2"} keyspaces)))))
 
   (testing "describing-nonexistent-keyspace"
-    (is (= nil (describe-keyspace "imaginary-keyspace"))))
+    (is (= {} (describe-keyspace "imaginary-keyspace"))))
 
   (testing "describing-existing-keyspace"
-    (let [keyspace (describe-keyspace "Keyspace1")]
-      (is (= ["Standard1" "Standard2" "StandardByUUID1" "Super1" "Super2"]
-             (sort (keys keyspace))))))
+    (let [keyspace (describe-keyspace "CassandraClojureTestKeyspace1")
+          events (keyspace "Events")]
+      (is (= "org.apache.cassandra.db.marshal.UTF8Type" (events "CompareWith")))
+      (is (re-matches #"(?s).*CassandraClojureTestKeyspace1\.Events.*"
+                      (events "Desc")))
+      (is (re-matches #"(?s).*Column Family Type: Standard.*"
+                      (events "Desc")))
+      (is (re-matches #"(?s).*Columns Sorted By: org.apache.cassandra.db.marshal.UTF8Type.*"
+                      (events "Desc")))))
+
 
   (testing "getting-empty-record-with-real-column-family"
-    (is (= []
-           (get-record "Standard1" "bogus_key"))))
+    (is (= {} (get-record "CassandraClojureTestKeyspace1" "Events" "bogus_key")))
+    (in-keyspace "CassandraClojureTestKeyspace1"
+      (is (= {} (get-record "Events" "bogus_key")))))
 
   (testing "getting-empty-record-with-nonexistent-column-family"
-    (is (= nil
-           (get-record "imaginary_column_family" "bogus_key"))))
+    (is (= {} (get-record "CassandraClojureTestKeyspace1" "fake_column_family" "bogus_key")))
+    (in-keyspace "CassandraClojureTestKeyspace1"
+      (is (= {} (get-record "fake_column_family" "bogus_key")))))
 
   (testing "getting-existing-record"
-    (is (= [{:name "dog" :value "Molly"} {:name "dog2" :value "Oscar"}
-            {:name "name" :value "colin"} {:name "wifey" :value "kathy"}]
-           (no-timestamps (get-record "Standard1" "ccc")))))
+    (in-keyspace "CassandraClojureTestKeyspace1"
+      (insert "People" "colin" "full_name" "Colin Jones")
+      (insert "People" "colin" "location" "Chicagoland")
+
+      (let [colin (get-record "People" "colin")]
+        (is (= "Colin Jones" (colin "full_name")))
+        (is (= "Chicagoland" (colin "location"))))))
+
+  (testing "deleting-a-record"
+    (in-keyspace "CassandraClojureTestKeyspace1"
+      (insert "People" "kathy" "full_name" "Kathy Jones")
+      (is (= {"full_name" "Kathy Jones"} (get-record "People" "kathy")))
+
+      (delete-record "People" "kathy")
+      (is (= {} (get-record "People" "kathy")))))
+
+  (testing "inserting-a-record"
+    (in-keyspace "CassandraClojureTestKeyspace1"
+      (insert "People" "oscar" {"full_name" "Oscar Jones", "location" "Chicagoland"})
+      (let [oscar (get-record "People" "oscar")]
+        (is (= {"full_name" "Oscar Jones",
+                "location", "Chicagoland"} (get-record "People" "oscar"))))))
+
 )
