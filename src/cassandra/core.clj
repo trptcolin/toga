@@ -15,10 +15,11 @@
 (def *client*)
 (def *keyspace*)
 
-(defmacro with-client [[host port] & body]
+(defmacro with-client [[host port keyspace] & body]
   `(let [socket# (TSocket. ~host ~port)
          protocol# (TBinaryProtocol. socket#)]
-     (binding [*client* (Cassandra$Client. protocol#)]
+     (binding [*client* (Cassandra$Client. protocol#)
+               *keyspace* ~keyspace]
        (with-open [transport# socket#]
          (.open transport#)
          ~@body))))
@@ -224,7 +225,6 @@
          (fn [record]
            (delete-record keyspace (:column-family record) (:key record)))
          records-by-cf)))))
-
 
 (defn clear-keyspace
   "Use with extreme caution. This will blow away all data for a Keyspace"

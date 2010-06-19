@@ -3,7 +3,16 @@
         cassandra.test-helper
         clojure.test))
 
-(test-cassandra core-functionality
+(test-cassandra cassandra-is-running)
+
+(deftest with-client-and-keyspace
+  (with-client ["localhost" 9160 "CassandraClojureTestKeyspace1"]
+      (insert "People" "colin" "full_name" "Colin Jones")
+      (let [colin (get-record "People" "colin")]
+        (is (= "Colin Jones" (colin "full_name"))))))
+
+(deftest core-functionality
+  (with-client ["localhost" 9160]
   ; TODO: Right now there's a manual step to create these keyspaces
   ;       Should it be automatic? (maybe a prompt if they already exist?)
   ;       This would probably mean running a script that populates the storage-conf.xml
@@ -97,3 +106,4 @@
       ))
 
 )
+  )
