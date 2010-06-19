@@ -28,7 +28,7 @@
      ~@body))
 
 
-(defn- get-current-microseconds []
+(defn- timestamp []
   (/ (System/nanoTime) 1000))
 
 (defn- column->map [col]
@@ -40,8 +40,6 @@
   {:name (bytes->str (.getName col))
    :value (map column->map (.getColumns col))})
 
-; TODO: A bunch of dumb Java construction procedures here.
-;       Should they be extracted?
 (defn- make-slice-range []
   (doto (SliceRange.)
     (.setStart (byte-array 0))
@@ -62,7 +60,7 @@
      (.setColumn (str->bytes column)))))
 
 (defn make-column [name value]
-  (Column. (str->bytes name) (str->bytes value) (get-current-microseconds)))
+  (Column. (str->bytes name) (str->bytes value) (timestamp)))
 
 (defn map->columns [column]
   (map (fn [[k v]] (make-column k v)) column))
@@ -99,9 +97,8 @@
   "Gets a sequence of the names of all keyspaces on *client*"
   [] (seq (.describe_keyspaces *client*)))
 
-; TODO: Is this memoization a bad idea?
-;       Currently, changing keyspaces requires a cassandra restart to re-read the xml
-;       This strategy will obviously be problematic in other cases...
+; Currently, changing keyspaces requires a cassandra restart to re-read the xml
+;   So memoizing rarely hurts in this case
 (def memoized-get-all-keyspaces
   (memoize get-all-keyspaces))
 
@@ -157,7 +154,7 @@
      k
      (make-column-path family col)
      (str->bytes value)
-     (get-current-microseconds)
+     (timestamp)
      *consistency-level*)))
 
 ; TODO: cache keyspaces to eliminate database calls
@@ -167,17 +164,19 @@
    (some #{column-family}
      (keys (describe-keyspace keyspace)))))
 
-; naive - ignores SuperColumn
+(defn column-or-supercolumn->map [x]
+  (let [supercolumn (.getSuper_column x)]
+    (if supercolumn
+      (supercolumn->map supercolumn)
+      (column->map (.getColumn x)))))
+
 (defn- get-columns
   ([column-family k] (get-columns *keyspace* column-family k))
   ([keyspace column-family k]
    (if (column-family-exists? keyspace column-family)
      (let [parent (ColumnParent. column-family)]
        (map
-         #(let [supercolumn (.getSuper_column %)]
-            (if supercolumn
-              (supercolumn->map supercolumn)
-              (column->map (.getColumn %))))
+         column-or-supercolumn->map
          (.get_slice *client*
            keyspace
            k
@@ -196,7 +195,8 @@
 
 ; TODO: We discard timestamp information here
 ;       Is that something there's a genuine use case for?
-;       Wanted to add it as metadata on the column value, but alas...
+;       Wanted to add it as metadata on the column value, but alas,
+  ;       strings aren't proper Clojure objects with metadata
 (defn get-record
   "Get a record as a map of column names to values"
   ([column-family key] (get-record *keyspace* column-family key))
@@ -211,7 +211,7 @@
      keyspace
      k
      (make-column-path column-family)
-     (get-current-microseconds)
+     (timestamp)
      *consistency-level*)))
 
 (defn clear-column-family
