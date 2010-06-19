@@ -158,7 +158,7 @@
      (timestamp)
      *consistency-level*)))
 
-; TODO: cache keyspaces to eliminate database calls
+; TODO: cache keyspaces to eliminate database calls?
 (defn- column-family-exists?
   ([column-family] (column-family-exists? *keyspace* column-family))
   ([keyspace column-family]
@@ -175,24 +175,24 @@
   ([column-family k] (get-columns *keyspace* column-family k))
   ([keyspace column-family k]
    (if (column-family-exists? keyspace column-family)
-     (let [parent (ColumnParent. column-family)]
-       (map
-         column-or-supercolumn->map
-         (.get_slice *client*
-           keyspace
-           k
-           parent
-           (make-slice-predicate)
-           *consistency-level*)))
+     (map
+       column-or-supercolumn->map
+       (.get_slice *client*
+         keyspace
+         k
+         (ColumnParent. column-family)
+         (make-slice-predicate)
+         *consistency-level*))
      nil)))
 
 (defn mapcolumns->map [cols]
   (reduce (fn [x y] (into x {(:name y) (:value y)})) {} cols))
 
 (defn name-value-reducer [x y]
-  (if (seq? (:value y))
-    (into x {(:name y) (mapcolumns->map (:value y))})
-    (into x {(:name y) (:value y)})))
+  (into x {(:name y)
+           (if (seq? (:value y))
+             (mapcolumns->map (:value y))
+             (:value y))}))
 
 ; TODO: We discard timestamp information here
 ;       Is that something there's a genuine use case for?
@@ -202,8 +202,7 @@
   "Get a record as a map of column names to values"
   ([column-family key] (get-record *keyspace* column-family key))
   ([keyspace column-family k]
-   (let [cols (get-columns keyspace column-family k)]
-     (reduce name-value-reducer {} cols))))
+     (reduce name-value-reducer {} (get-columns keyspace column-family k))))
 
 (defn delete-record
   ([column-family k] (delete-record *keyspace* column-family k))
@@ -219,20 +218,14 @@
   "Use with extreme caution. It will blow away all data for a ColumnFamily"
   ([column-family] (clear-column-family *keyspace* column-family))
   ([keyspace column-family]
-   (let [records-by-cf (get-records-in-column-family keyspace column-family)]
-     (doall
-       (map
-         (fn [record]
-           (delete-record keyspace (:column-family record) (:key record)))
-         records-by-cf)))))
+   (map
+     (fn [record] (delete-record keyspace (:column-family record) (:key record)))
+     (get-records-in-column-family keyspace column-family))))
 
 (defn clear-keyspace
   "Use with extreme caution. This will blow away all data for a Keyspace"
   [keyspace]
-  (let [cfs (keys (describe-keyspace keyspace))]
-    (doall
-      (map
-        (fn [cf]
-          (clear-column-family keyspace cf))
-        cfs))))
+  (map
+    (fn [cf] (clear-column-family keyspace cf))
+    (keys (describe-keyspace keyspace))))
 
