@@ -103,7 +103,13 @@
 
 ;      (testing "get nonexistent record (testing before)"
 ;        (is (= {} (get-record "People" "molly"))))
-      ))
 
-)
-  )
+      (testing "multiple supercolumns"
+        (let [colin {"mailing" {"city" "Libertyville"
+                                              "state" "IL"
+                                              "zip" "60048"}
+                                   "email" {"domain" "8thlight.com"
+                                            "user" "colin"}}]
+
+          (insert "People" "colin" colin)
+          (is (= colin (get-record "People" "colin")))))))))
