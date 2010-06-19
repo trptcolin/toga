@@ -1,5 +1,5 @@
-(ns cassandra.test-helper
-  (:use cassandra.core
+(ns clojandra.test-helper
+  (:use clojandra.core
         clojure.test)
   (:import (org.apache.thrift.transport TTransportException)))
 

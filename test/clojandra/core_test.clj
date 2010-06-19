@@ -1,6 +1,6 @@
-(ns cassandra.core-test
-  (:use cassandra.core
-        cassandra.test-helper
+(ns clojandra.core-test
+  (:use clojandra.core
+        clojandra.test-helper
         clojure.test))
 
 (test-cassandra cassandra-is-running)

@@ -3,7 +3,7 @@
 
 (def test-nses
   [
-   'cassandra.core-test
+   'clojandra.core-test
    'util.string-test
    ])
 

@@ -1,4 +1,4 @@
-(ns cassandra.core
+(ns clojandra.core
   (:use util.string)
   (:import
     (org.apache.cassandra.thrift
