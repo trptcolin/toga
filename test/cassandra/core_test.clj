@@ -5,12 +5,10 @@
 
 (test-cassandra core-functionality
   ; TODO: Right now there's a manual step to create these keyspaces
-  ;       It should be automatic (maybe a prompt if they already exist?)
-  ;       This will probably mean running a script that populates the storage-conf.xml
+  ;       Should it be automatic? (maybe a prompt if they already exist?)
+  ;       This would probably mean running a script that populates the storage-conf.xml
   ;       Should it pull the test keyspaces back out at the end of the test run?
   ;       Should the tests fire up the Cassanda server automatically?
-
-
 
   ; This should be happen before every test, but apparently use-fixtures
   ;   doesn't do what we need. Roll our own?

@@ -8,7 +8,7 @@
     (org.apache.thrift.transport TSocket)
     (org.apache.thrift.protocol TBinaryProtocol)))
 
-(def consistency-level ConsistencyLevel/ONE)
+(def *consistency-level* ConsistencyLevel/ONE)
 
 (def *client*)
 (def *keyspace*)
@@ -59,59 +59,49 @@
    (doto (make-column-path family)
      (.setColumn (str->bytes column)))))
 
-(defn- make-supercolumn-path [family column]
-    (doto (make-column-path family)
-      (.setSuper_column (str->bytes column))))
-
-(defn make-column
-  ([] (Column.))
-  ([col]
-   (make-column (col 0) (col 1)))
-  ([name value]
-   (Column. (str->bytes name) (str->bytes value) (get-current-microseconds))))
+(defn make-column [name value]
+  (Column. (str->bytes name) (str->bytes value) (get-current-microseconds)))
 
 (defn map->columns [column]
-  (map (fn [x] (make-column x)) column))
+  (map (fn [[k v]] (make-column k v)) column))
 
-(defn make-supercolumn
-  ([] (SuperColumn.))
-  ([name columns]
-   (SuperColumn. (str->bytes name) (map->columns columns))))
+(defn make-supercolumn [name columns]
+  (SuperColumn. (str->bytes name)
+    (map->columns columns)))
 
-(defn make-columnorsupercolumn
-  ([] (ColumnOrSuperColumn.))
-  ([col]
-    (if (map? (col 1))
-      (do
-        (doto (make-columnorsupercolumn)
-             (.setSuper_column (make-supercolumn (col 0) (col 1))))
-        )
-      (doto (make-columnorsupercolumn)
-        (.setColumn (make-column (col 0) (col 1)))))))
+(defn initialize-column [column-or-supercolumn k v]
+  (if (map? v)
+    (.setSuper_column column-or-supercolumn (make-supercolumn k v))
+    (.setColumn column-or-supercolumn (make-column k v))))
+
+(defn make-column-or-supercolumn
+  ([[k v]]
+   (doto (ColumnOrSuperColumn.)
+     (initialize-column k v))))
 
 (defn- get-range-slices [keyspace column-family]
-(.get_range_slices
-  *client*
-  keyspace
-  (ColumnParent. column-family)
-  (make-slice-predicate)
-  (make-key-range "" "")
-  consistency-level))
+  (.get_range_slices
+    *client*
+    keyspace
+    (ColumnParent. column-family)
+    (make-slice-predicate)
+    (make-key-range "" "")
+    *consistency-level*))
 
 (defn- get-records-in-column-family [keyspace cf]
-(map
-  (fn [row] {:column-family cf :key (.getKey row) :columns (.getColumns row)})
-  (get-range-slices keyspace cf)))
+  (map
+    (fn [row] {:column-family cf :key (.getKey row) :columns (.getColumns row)})
+    (get-range-slices keyspace cf)))
 
 (defn get-all-keyspaces
-"Gets a sequence of the names of all keyspaces on *client*"
-[] (seq (.describe_keyspaces *client*)))
+  "Gets a sequence of the names of all keyspaces on *client*"
+  [] (seq (.describe_keyspaces *client*)))
 
 ; TODO: Is this memoization a bad idea?
 ;       Currently, changing keyspaces requires a cassandra restart to re-read the xml
 ;       This strategy will obviously be problematic in other cases...
 (def memoized-get-all-keyspaces
-(memoize get-all-keyspaces))
+  (memoize get-all-keyspaces))
 
 
 ; TODO: The instance? check here seems wrong, but does seem to work...
@@ -119,51 +109,48 @@
 ;         but pass the instance? test?  That's what happens here.
 ;       Also, this doesn't check for java.util.Map as a key (admittedly rare)
 (defn- to-hash-map [h]
-(apply hash-map
-  (interleave
-    (keys h)
-    (map
-      #(if (instance? java.util.Map %) (to-hash-map %) %)
-      (vals h)))))
+  (apply
+    hash-map
+    (interleave
+      (keys h)
+      (map
+        #(if (instance? java.util.Map %) (to-hash-map %) %)
+        (vals h)))))
 
 (defn describe-keyspace
-"Given a keyspace name for *client*, gets a hash-map of keyspace names
-mapped to a hash-map of keyspace settings"
-[keyspace]
-(to-hash-map
-  (if (some #{keyspace} (memoized-get-all-keyspaces))
-    (.describe_keyspace *client* keyspace)
-    nil)))
+  "Given a keyspace name for *client*, gets a hash-map of keyspace names
+  mapped to a hash-map of keyspace settings"
+  [keyspace]
+  (to-hash-map
+    (if (some #{keyspace} (memoized-get-all-keyspaces))
+      (.describe_keyspace *client* keyspace)
+      nil)))
 
-(defn vec->supercolumns [v]
-(make-columnorsupercolumn v))
+(defmulti insert
+  "Inserts a record"
+  (fn [& args] (type (last args))))
 
-(defn insert
-"Can insert a column, or an entire record as a set of columns"
-([family k value-map]
- (doall
-   (map
-     (fn [x]
-       (if (map? (x 1))
-         (do
-           (.batch_insert *client*
-             *keyspace*
-             k
-             {family [(vec->supercolumns x)]}
-             consistency-level)
-           )
-         (insert family k (x 0) (x 1))
-           ))
-       value-map)))
-  ([family k col value] (insert *keyspace* family k col value))
+(defmethod insert clojure.lang.IPersistentMap
+  ([family k value-map]
+   (insert *keyspace* family k value-map))
+  ([keyspace family k value-map]
+     (.batch_insert *client*
+       keyspace
+       k
+       {family (map #(make-column-or-supercolumn %) value-map)}
+       *consistency-level*)))
+
+(defmethod insert java.lang.Object
+  ([family k col value]
+   (insert *keyspace* family k col value))
   ([keyspace family k col value]
-    (.insert *client*
-      keyspace
-      k
-      (make-column-path family col)
-      (str->bytes value)
-      (get-current-microseconds)
-      consistency-level)))
+   (.insert *client*
+     keyspace
+     k
+     (make-column-path family col)
+     (str->bytes value)
+     (get-current-microseconds)
+     *consistency-level*)))
 
 ; TODO: cache keyspaces to eliminate database calls + above
 (defn- column-family-exists?
@@ -188,7 +175,7 @@ mapped to a hash-map of keyspace settings"
            k
            parent
            (make-slice-predicate)
-           consistency-level)))
+           *consistency-level*)))
      nil)))
 
 (defn mapcolumns->map [cols]
@@ -217,7 +204,7 @@ mapped to a hash-map of keyspace settings"
      k
      (make-column-path column-family)
      (get-current-microseconds)
-     consistency-level)))
+     *consistency-level*)))
 
 (defn clear-column-family
   "Use with extreme caution. It will blow away all data for a ColumnFamily"
