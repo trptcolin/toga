@@ -2,9 +2,11 @@
   (:use util.string)
   (:import
     (org.apache.cassandra.thrift
-      ConsistencyLevel Cassandra$Client ColumnPath
-      SlicePredicate SliceRange ColumnParent
-      KeyRange SuperColumn ColumnOrSuperColumn Column)
+      ConsistencyLevel Cassandra$Client
+      SuperColumn ColumnOrSuperColumn Column
+      ColumnParent ColumnPath
+      SlicePredicate SliceRange KeyRange
+      Mutation)
     (org.apache.thrift.transport TSocket)
     (org.apache.thrift.protocol TBinaryProtocol)))
 
@@ -126,6 +128,13 @@
       (.describe_keyspace *client* keyspace)
       nil)))
 
+(defmulti make-mutation type)
+
+(defmethod make-mutation ColumnOrSuperColumn
+  [column-or-supercolumn]
+  (doto (Mutation.)
+    (.setColumn_or_supercolumn column-or-supercolumn)))
+
 (defmulti insert
   "Inserts a record"
   (fn [& args] (type (last args))))
@@ -134,10 +143,9 @@
   ([family k value-map]
    (insert *keyspace* family k value-map))
   ([keyspace family k value-map]
-     (.batch_insert *client*
+     (.batch_mutate *client*
        keyspace
-       k
-       {family (map #(make-column-or-supercolumn %) value-map)}
+       {k {family (map #(make-mutation (make-column-or-supercolumn %)) value-map)}}
        *consistency-level*)))
 
 (defmethod insert java.lang.Object
@@ -152,7 +160,7 @@
      (get-current-microseconds)
      *consistency-level*)))
 
-; TODO: cache keyspaces to eliminate database calls + above
+; TODO: cache keyspaces to eliminate database calls
 (defn- column-family-exists?
   ([column-family] (column-family-exists? *keyspace* column-family))
   ([keyspace column-family]
