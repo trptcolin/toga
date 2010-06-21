@@ -11,7 +11,7 @@ Clojandra allows your Clojure code to communicate with Cassandra via its
 Thrift API.
 
 It is ALPHA software. Clojandra should not be used, and has not been used, in
-production, by anyone... Yet.
+production, by anyone... Yet.  :)
 
 While this client is intended to allow simple access to Cassandra, a working
 knowledge of Cassandra is essential to getting up and running. There are a

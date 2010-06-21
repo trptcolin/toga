@@ -1,12 +1,10 @@
 (ns clojandra.core
-  (:use util.string)
+  (:use clojandra.columns)
   (:import
     (org.apache.cassandra.thrift
       ConsistencyLevel Cassandra$Client
-      SuperColumn ColumnOrSuperColumn Column
       ColumnParent ColumnPath
-      SlicePredicate SliceRange KeyRange
-      Mutation)
+      SlicePredicate SliceRange KeyRange)
     (org.apache.thrift.transport TSocket)
     (org.apache.thrift.protocol TBinaryProtocol)))
 
@@ -29,18 +27,6 @@
      ~@body))
 
 
-(defn- timestamp []
-  (/ (System/nanoTime) 1000))
-
-(defn- column->map [col]
-  {:name (bytes->str (.getName col)),
-   :value (bytes->str (.getValue col))
-   :timestamp (.getTimestamp col)})
-
-(defn- supercolumn->map [col]
-  {:name (bytes->str (.getName col))
-   :value (map column->map (.getColumns col))})
-
 (defn- make-slice-range []
   (doto (SliceRange.)
     (.setStart (byte-array 0))
@@ -58,27 +44,8 @@
   ([family] (ColumnPath. family))
   ([family column]
    (doto (make-column-path family)
-     (.setColumn (str->bytes column)))))
+     (.setColumn (to-bytes column)))))
 
-(defn make-column [name value]
-  (Column. (str->bytes name) (str->bytes value) (timestamp)))
-
-(defn map->columns [column]
-  (map (fn [[k v]] (make-column k v)) column))
-
-(defn make-supercolumn [name columns]
-  (SuperColumn. (str->bytes name)
-    (map->columns columns)))
-
-(defn initialize-column [column-or-supercolumn k v]
-  (if (map? v)
-    (.setSuper_column column-or-supercolumn (make-supercolumn k v))
-    (.setColumn column-or-supercolumn (make-column k v))))
-
-(defn make-column-or-supercolumn
-  ([[k v]]
-   (doto (ColumnOrSuperColumn.)
-     (initialize-column k v))))
 
 (defn- get-range-slices [keyspace column-family]
   (.get_range_slices
@@ -103,35 +70,14 @@
 (def memoized-get-all-keyspaces
   (memoize get-all-keyspaces))
 
-
-; TODO: The instance? check here seems wrong, but does seem to work...
-;       How can an object NOT pass the isa? test for a Java class
-;         but pass the instance? test?  That's what happens here.
-;       Also, this doesn't check for java.util.Map as a key (admittedly rare)
-(defn- to-hash-map [h]
-  (apply
-    hash-map
-    (interleave
-      (keys h)
-      (map
-        #(if (instance? java.util.Map %) (to-hash-map %) %)
-        (vals h)))))
-
 (defn describe-keyspace
   "Given a keyspace name for *client*, gets a hash-map of keyspace names
   mapped to a hash-map of keyspace settings"
   [keyspace]
-  (to-hash-map
+  (to-map
     (if (some #{keyspace} (memoized-get-all-keyspaces))
       (.describe_keyspace *client* keyspace)
       nil)))
-
-(defmulti make-mutation type)
-
-(defmethod make-mutation ColumnOrSuperColumn
-  [column-or-supercolumn]
-  (doto (Mutation.)
-    (.setColumn_or_supercolumn column-or-supercolumn)))
 
 (defmulti insert
   "Inserts a record"
@@ -143,10 +89,10 @@
   ([keyspace family k value-map]
      (.batch_mutate *client*
        keyspace
-       {k {family (map #(make-mutation (make-column-or-supercolumn %)) value-map)}}
+       {k {family (map #(make-mutation %) value-map)}}
        *consistency-level*)))
 
-(defmethod insert java.lang.Object
+(defmethod insert :default
   ([family k col value]
    (insert *keyspace* family k col value))
   ([keyspace family k col value]
@@ -154,7 +100,7 @@
      keyspace
      k
      (make-column-path family col)
-     (str->bytes value)
+     (to-bytes value)
      (timestamp)
      *consistency-level*)))
 
@@ -165,18 +111,12 @@
    (some #{column-family}
      (keys (describe-keyspace keyspace)))))
 
-(defn column-or-supercolumn->map [x]
-  (let [supercolumn (.getSuper_column x)]
-    (if supercolumn
-      (supercolumn->map supercolumn)
-      (column->map (.getColumn x)))))
-
 (defn- get-columns
   ([column-family k] (get-columns *keyspace* column-family k))
   ([keyspace column-family k]
    (if (column-family-exists? keyspace column-family)
      (map
-       column-or-supercolumn->map
+       to-map
        (.get_slice *client*
          keyspace
          k
@@ -185,13 +125,10 @@
          *consistency-level*))
      nil)))
 
-(defn mapcolumns->map [cols]
-  (reduce (fn [x y] (into x {(:name y) (:value y)})) {} cols))
-
 (defn name-value-reducer [x y]
   (into x {(:name y)
            (if (seq? (:value y))
-             (mapcolumns->map (:value y))
+             (to-map (:value y))
              (:value y))}))
 
 ; TODO: We discard timestamp information here
