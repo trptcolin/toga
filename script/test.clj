@@ -4,6 +4,7 @@
 (def test-nses
   [
    'clojandra.core-test
+   'clojandra.columns-test
    'util.string-test
    ])
 

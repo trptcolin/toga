@@ -11,36 +11,38 @@
 (defmethod to-bytes String [x]
   (str->bytes x))
 
-
 (defmulti to-map type)
+(defmulti to-map-entry type)
 
-(defmethod to-map java.util.Map [m]
-  (into {} (map
-             (fn [[k v]]
-               (if (instance? java.util.Map v)
-                 [k (to-map v)]
-                 [k v]))
-             m)))
+(defmethod to-map java.util.Map [m] (into {} (map to-map-entry m)))
+(defmethod to-map clojure.lang.Sequential [cols] (into {} cols))
 
-(defmethod to-map clojure.lang.ISeq [cols]
-  (reduce (fn [x y] (into x {(:name y) (:value y)})) {} cols))
+(defmethod to-map :default [x] {})
 
-(defmethod to-map Column [col]
-  {:name (bytes->str (.getName col)),
-   :value (bytes->str (.getValue col))
-   :timestamp (.getTimestamp col)})
+(defmethod to-map-entry java.util.Map$Entry [[k v]]
+  (if (instance? java.util.Map v)
+    [k (to-map v)]
+    [k v]))
 
-(defmethod to-map SuperColumn [col]
-  {:name (bytes->str (.getName col))
-   :value (map to-map (.getColumns col))})
+(defmethod to-map-entry clojure.lang.MapEntry [[k v]]
+  (if (seq? v)
+    [k (to-map v)]
+    [k v]))
 
-(defmethod to-map ColumnOrSuperColumn [x]
-  (to-map
+(defmethod to-map-entry Column [col]
+  (first {(bytes->str (.getName col)) (bytes->str (.getValue col))}))
+
+(defmethod to-map-entry SuperColumn [col]
+  (first {(bytes->str (.getName col))
+          (map to-map-entry (.getColumns col))}))
+
+(defmethod to-map-entry ColumnOrSuperColumn [x]
+  (to-map-entry
     (if (.isSetColumn x)
       (.getColumn x)
       (.getSuper_column x))))
 
-(defmethod to-map :default [x] {})
+(defmethod to-map-entry :default [x] nil)
 
 
 (defn make-column [name value]

@@ -116,7 +116,7 @@
   ([keyspace column-family k]
    (if (column-family-exists? keyspace column-family)
      (map
-       to-map
+       to-map-entry
        (.get_slice *client*
          keyspace
          k
@@ -124,12 +124,6 @@
          (make-slice-predicate)
          *consistency-level*))
      nil)))
-
-(defn name-value-reducer [x y]
-  (into x {(:name y)
-           (if (seq? (:value y))
-             (to-map (:value y))
-             (:value y))}))
 
 ; TODO: We discard timestamp information here
 ;       Is that something there's a genuine use case for?
@@ -139,7 +133,10 @@
   "Get a record as a map of column names to values"
   ([column-family key] (get-record *keyspace* column-family key))
   ([keyspace column-family k]
-     (reduce name-value-reducer {} (get-columns keyspace column-family k))))
+     (reduce
+       (fn [x y] (conj x (to-map-entry y)))
+       {}
+       (get-columns keyspace column-family k))))
 
 (defn delete-record
   ([column-family k] (delete-record *keyspace* column-family k))
