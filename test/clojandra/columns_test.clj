@@ -23,4 +23,18 @@
                        (.setName (columns/to-bytes "a"))
                        (.setValue (columns/to-bytes "1")))))))
 
+(deftest cassandra-supercolumn-to-map-entry
+  (is (= ["a" [["1" "FOO"]]] (columns/to-map-entry
+                     (doto (org.apache.cassandra.thrift.SuperColumn. (columns/to-bytes "a")
+                       [(doto (org.apache.cassandra.thrift.Column.)
+                         (.setName (columns/to-bytes "1"))
+                         (.setValue (columns/to-bytes "FOO")))]))))))
+
+(deftest cassandra-column-or-supercolumn-to-map-entry
+  (is (= ["a" "1"] (columns/to-map-entry
+                     (doto (org.apache.cassandra.thrift.ColumnOrSuperColumn.)
+                       (.setColumn
+                         (doto (org.apache.cassandra.thrift.Column.)
+                           (.setName (columns/to-bytes "a"))
+                           (.setValue (columns/to-bytes "1")))))))))
 

@@ -67,12 +67,10 @@
 
 (defmulti make-mutation type)
 
-(defmethod make-mutation Deletion
-  [deletion]
+(defmethod make-mutation Deletion [deletion]
   (throw (Exception. "Deletion isn't implemented yet.")))
 
-(defmethod make-mutation :default
-  [x]
+(defmethod make-mutation :default [x]
   (doto (Mutation.)
     (.setColumn_or_supercolumn (make-column-or-supercolumn x))))
 
