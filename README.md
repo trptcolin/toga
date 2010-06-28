@@ -1,22 +1,21 @@
-Clojandra
+Toga
 =========
 
-A Cassandra client for Clojure
+A Cassandra client wrapper for Clojure
 
 
-Introduction
+What is Toga?
 =====
 
-Clojandra allows your Clojure code to communicate with Cassandra via its
+Toga allows your Clojure code to communicate with Cassandra via its
 Thrift API.
 
-It is ALPHA software. Clojandra should not be used, and has not been used, in
-production, by anyone... Yet.  :)
+It is ALPHA software. Toga has not been used in production, by anyone... Yet.  :)
 
 While this client is intended to allow simple access to Cassandra, a working
 knowledge of Cassandra is essential to getting up and running. There are a
 couple of excellent articles that you should study and understand before trying
-to use Clojandra to work with your data:
+to use Toga to work with your data:
 
 * http://wiki.apache.org/cassandra/GettingStarted
 * http://arin.me/blog/wtf-is-a-supercolumn-cassandra-data-model
@@ -107,7 +106,7 @@ probably what you would expect: nested maps.
                                           "user" "colin"}})
 
 Also keep in mind that one level of nesting is all you can do: SuperColumns only
-contain proper Columns, which are strings in the context of Clojandra (for now).
+contain proper Columns, which are strings in the context of Toga.
 
 
 
@@ -121,5 +120,5 @@ If you have ideas for improvements or find things that are broken,
 let me know through my GitHub account: http://github.com/trptcolin or over
 email (trptcolin@gmail.com)
 
-Patches will be considered if they are accompanied by appropriate tests.
+Patches are welcomed!
 
