@@ -1,5 +1,5 @@
-(ns clojandra.test-helper
-  (:use clojandra.core
+(ns toga.test-helper
+  (:use toga.core
         clojure.test)
   (:import (org.apache.thrift.transport TTransportException)))
 

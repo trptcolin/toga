@@ -1,6 +1,6 @@
-(ns clojandra.core-test
-  (:use clojandra.core
-        clojandra.test-helper
+(ns toga.core-test
+  (:use toga.core
+        toga.test-helper
         clojure.test))
 
 (test-cassandra cassandra-is-running)

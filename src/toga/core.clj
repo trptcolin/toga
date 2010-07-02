@@ -1,5 +1,5 @@
-(ns clojandra.core
-  (:use clojandra.columns)
+(ns toga.core
+  (:use toga.columns)
   (:import
     (org.apache.cassandra.thrift
       ConsistencyLevel Cassandra$Client

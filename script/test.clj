@@ -3,8 +3,8 @@
 
 (def test-nses
   [
-   'clojandra.core-test
-   'clojandra.columns-test
+   'toga.core-test
+   'toga.columns-test
    'util.string-test
    ])
 

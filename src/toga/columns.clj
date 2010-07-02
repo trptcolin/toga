@@ -1,4 +1,4 @@
-(ns clojandra.columns
+(ns toga.columns
   (:use util.string)
   (:import
     (org.apache.cassandra.thrift

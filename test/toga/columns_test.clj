@@ -1,6 +1,6 @@
-(ns clojandra.columns-test
+(ns toga.columns-test
   (:use clojure.test)
-  (:require [clojandra.columns :as columns]))
+  (:require [toga.columns :as columns]))
 
 (deftest java-hashmap-to-map
   (is (= {} (columns/to-map (java.util.HashMap.))))
