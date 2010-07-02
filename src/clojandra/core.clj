@@ -47,19 +47,20 @@
      (.setColumn (to-bytes column)))))
 
 
-(defn- get-range-slices [keyspace column-family]
+(defn- get-range-slices [keyspace column-family start end]
   (.get_range_slices
     *client*
     keyspace
     (ColumnParent. column-family)
     (make-slice-predicate)
-    (make-key-range "" "")
+    (make-key-range start end)
     *consistency-level*))
 
-(defn- get-records-in-column-family [keyspace cf]
-  (map
-    (fn [row] {:column-family cf :key (.getKey row) :columns (.getColumns row)})
-    (get-range-slices keyspace cf)))
+(defn get-records [keyspace cf start end]
+  (into {}
+    (map
+      (fn [row] [(.getKey row) (into {} (map to-map-entry (.getColumns row)))])
+      (get-range-slices keyspace cf start end))))
 
 (defn get-all-keyspaces
   "Gets a sequence of the names of all keyspaces on *client*"
@@ -152,14 +153,16 @@
   "Use with extreme caution. It will blow away all data for a ColumnFamily"
   ([column-family] (clear-column-family *keyspace* column-family))
   ([keyspace column-family]
-   (map
-     (fn [record] (delete-record keyspace (:column-family record) (:key record)))
-     (get-records-in-column-family keyspace column-family))))
+   (doall
+     (map
+       (fn [record] (delete-record keyspace column-family (.getKey record)))
+       (get-range-slices keyspace column-family "" "")))))
 
 (defn clear-keyspace
-  "Use with extreme caution. This will blow away all data for a Keyspace"
+  "Use with extreme caution. This will blow away all data for an entire Keyspace"
   [keyspace]
-  (map
-    (fn [cf] (clear-column-family keyspace cf))
-    (keys (describe-keyspace keyspace))))
+  (doall
+    (map
+      (fn [cf] (clear-column-family keyspace cf))
+      (keys (describe-keyspace keyspace)))))
 

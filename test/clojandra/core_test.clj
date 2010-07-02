@@ -80,6 +80,20 @@
         (is (= {"full_name" "Oscar Jones",
                 "location", "Chicagoland"} (get-record "People" "oscar"))))))
 
+  ; NOTE: this will only work using an order-preserving partitioner
+  ;         (set up in the Cassandra storage-conf.xml)
+  (testing "get slice of keys"
+    (clear-keyspace "CassandraClojureTestKeyspace1"); TODO: make this automatic
+    (in-keyspace "CassandraClojureTestKeyspace1"
+      (insert "People" "colin" {"full_name" "Colin Jones"})
+      (insert "People" "oscar" {"full_name" "Oscar Jones"})
+      (insert "People" "molly" {"full_name" "Molly Jones"})
+
+      (is (= {"molly" {"full_name" "Molly Jones"}
+              "oscar" {"full_name" "Oscar Jones"}}
+             (get-records "CassandraClojureTestKeyspace1" "People" "l" "z")))))
+
+
   (testing "with supercolumns"
     (in-keyspace "CassandraClojureTestKeyspace2"
 
@@ -100,9 +114,6 @@
           (insert "People" "molly" molly)
 
           (is (= molly (get-record "People" "molly")))))
-
-;      (testing "get nonexistent record (testing before)"
-;        (is (= {} (get-record "People" "molly"))))
 
       (testing "multiple supercolumns"
         (let [colin {"mailing" {"city" "Libertyville"
