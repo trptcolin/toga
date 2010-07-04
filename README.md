@@ -87,8 +87,8 @@ pulling things back out of the datastore:
     (with-client ["localhost" 9160 "TestKeyspace"]
       (get-record "People" "colin"))
 
-Cassandra doesn't have a strict notion of a record (that I'm aware of), but
-here we just mean a map, where columns are represented as map entries. So, given
+Cassandra doesn't use the terminology "record" (that I'm aware of), but here we
+just mean a map, where columns are represented as map entries. So, given
 the previous statements taken as a group, the last statement would return:
 
     {"full_name" "Colin Jones", "company" "8th Light"}
@@ -106,7 +106,7 @@ probably what you would expect: nested maps.
                                           "user" "colin"}})
 
 Also keep in mind that one level of nesting is all you can do: SuperColumns only
-contain proper Columns, which are strings in the context of Toga.
+contain proper Columns, which are a string key and value in the context of Toga.
 
 
 

@@ -6,9 +6,10 @@ Suggestions here are welcome via GitHub message or email (trptcolin@gmail.com)
 Coming Soon
 =====
 
-* Real-ish examples (not just family/pets)
+* Gets over ColumnRanges
 * Failover
 * Connection pooling
+* More examples / ideas for structuring data
 
 
 Coming upon Cassandra 0.7 release
