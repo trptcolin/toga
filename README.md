@@ -23,35 +23,32 @@ to use Toga to work with your data:
 A more extensive list of articles is here:
 * http://wiki.apache.org/cassandra/ArticlesAndPresentations
 
-You can make sure you have a compatible version of Cassandra ready to go
-by running your Cassandra server on the default port (9160) and running
-./script/test in the same directory as this README.
-
-
 
 Requirements
 ============
 
 * Apache Cassandra 0.6.2
+  * Check the project out at git://git.apache.org/cassandra.git
+  * IMPORTANT: `git checkout 0.6.2` to use the 0.6.2 version
+* Leiningen (recommended to pull down the rest of the dependencies)
+  * `lein deps` in the Toga directory will get you what you need
 
-For now, all other dependencies are distributed with the project:
-
-* Clojure: clojure-1.2.0-master-20100606.140311-84.jar
-* Thrift: libthrift-917130.jar
-* Log4J: log4j-1.2.14.jar
-* SL4J: slf4j-api-1.5.8.jar
-        slf4j-log4j12-1.5.8.jar
+You can make sure you have everything ready to go by running your Cassandra
+server on the default port (9160) and running ./script/test in the same
+directory as this README.
 
 
 Examples
 ========
 
-We assume knowledge here of Cassandra terminology (Keyspace, ColumnFamily,
-Column, SuperColumn).
+For these examples, I'll assume knowledge of Cassandra terminology (Keyspace,
+ColumnFamily, Column, SuperColumn).
 
-In the first example, we open up a connection to a Cassandra server on the
-local machine, on the default port (9160).  We assume that TestKeyspace is
-defined in the conf/storage-conf.xml file in your Cassandra directory.  The
+In the first example, we'll open up a connection to a Cassandra server on the
+local machine, on the default port (9160). We assume that TestKeyspace is
+defined in the conf/storage-conf.xml file in your Cassandra directory. If that's
+not the case on your machine, you'll need to make it so to use the example. (See
+the articles The
 result is that we insert a Column with the name "full_name" and the value
 "Colin Jones", under the key "colin".
 
