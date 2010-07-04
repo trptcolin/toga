@@ -8,7 +8,7 @@ What is Toga?
 =====
 
 Toga allows your Clojure code to communicate with Cassandra via its
-Thrift API.
+Thrift API. You can think of Toga as a wrapper for Cassandra. Get it?
 
 It is ALPHA software. Toga has not been used in production, by anyone... Yet.  :)
 
