@@ -7,7 +7,6 @@ Coming Soon
 =====
 
 * Real-ish examples (not just family/pets)
-* Friendlier setup (setting up Partitioner and Keyspaces in storage-conf.xml?)
 * Failover
 * Connection pooling
 
@@ -15,4 +14,7 @@ Coming Soon
 Coming upon Cassandra 0.7 release
 ======
 
+* Friendlier setup, setting up test keyspaces / column families
 * Alter Keyspaces / ColumnFamilies
+  - system_add_keyspace / system_drop_keyspace / system_rename_keyspace
+  - system_add_column_family / system_drop_column_family / system_rename_column_family
