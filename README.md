@@ -44,18 +44,17 @@ Examples
 For these examples, I'll assume knowledge of Cassandra terminology (Keyspace,
 ColumnFamily, Column, SuperColumn).
 
-In the first example, we'll open up a connection to a Cassandra server on the
-local machine, on the default port (9160). We assume that TestKeyspace is
+In the first example, I'll open up a connection to a Cassandra server on the
+local machine, on the default port (9160). I'll also assume that TestKeyspace is
 defined in the conf/storage-conf.xml file in your Cassandra directory. If that's
 not the case on your machine, you'll need to make it so to use the example. (See
-the articles The
-result is that we insert a Column with the name "full_name" and the value
-"Colin Jones", under the key "colin".
+the articles The result is that we insert a Column with the name "full_name" and
+the value "Colin Jones", under the key "colin".
 
     (with-client ["localhost" 9160]
       (insert "TestKeyspace" "People" "colin" "full_name" "Colin Jones"))
 
-While this is pretty simple, obviously we will often want to insert multiple
+While this is pretty simple, obviously we'll often want to insert multiple
 related columns at once in a given ColumnFamily.  We can do that by using a
 map rather than a key and value:
 
@@ -65,7 +64,7 @@ map rather than a key and value:
 
 Of course, it may be inconvenient to have to repeat the Keyspace over and over
 when an entire application will likely access only a single namespace. There
-is an easier way that will allow us to avoid this repetition:
+is an easier way that'll allow us to avoid this repetition:
 
     (with-client ["localhost" 9160 "TestKeyspace"]
       (insert "People" "colin" {"full_name" "Colin Jones"
@@ -85,7 +84,7 @@ pulling things back out of the datastore:
       (get-record "People" "colin"))
 
 Cassandra doesn't use the terminology "record" (that I'm aware of), but here we
-just mean a map, where columns are represented as map entries. So, given
+just use it to mean a map, where columns are represented as map entries. So, given
 the previous statements taken as a group, the last statement would return:
 
     {"full_name" "Colin Jones", "company" "8th Light"}
@@ -115,7 +114,8 @@ encouraged.
 
 If you have ideas for improvements or find things that are broken,
 let me know through my GitHub account: http://github.com/trptcolin or over
-email (trptcolin@gmail.com)
+email (trptcolin@gmail.com) I'd love to hear thoughts on the API and how it
+could be improved.
 
 Patches are welcomed!
 
