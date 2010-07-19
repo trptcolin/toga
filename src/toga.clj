@@ -1,4 +1,4 @@
-(ns toga.core
+(ns toga
   (:refer-clojure :exclude (get))
   (:use toga.columns)
   (:import
