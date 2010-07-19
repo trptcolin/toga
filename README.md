@@ -81,7 +81,7 @@ I think at this point we have covered insertion pretty well, right? How about
 pulling things back out of the datastore:
 
     (with-client ["localhost" 9160 "TestKeyspace"]
-      (get-record "People" "colin"))
+      (toga/get "People" "colin"))
 
 Cassandra doesn't use the terminology "record" (that I'm aware of), but here we
 just use it to mean a map, where columns are represented as map entries. So, given
