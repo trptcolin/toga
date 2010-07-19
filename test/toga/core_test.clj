@@ -1,4 +1,5 @@
 (ns toga.core-test
+  (:refer-clojure :exclude (get))
   (:use toga.core
         toga.test-helper
         clojure.test))
@@ -15,7 +16,7 @@
 (deftest getting-record-with-client-and-keyspace
   (with-client ["localhost" 9160 "CassandraClojureTestKeyspace1"]
     (insert "Subscribers" "colin" "full_name" "Colin Jones")
-    (let [colin (get-record "Subscribers" "colin")]
+    (let [colin (toga.core/get "Subscribers" "colin")]
       (is (= "Colin Jones" (colin "full_name"))))))
 
 (deftest getting-all-keyspaces
@@ -39,32 +40,32 @@
 
 
 (deftest getting-empty-record-with-real-column-family
-  (is (= {} (get-record "CassandraClojureTestKeyspace1" "Events" "bogus_key")))
-  (is (= {} (get-record "Events" "bogus_key"))))
+  (is (= {} (toga.core/get "CassandraClojureTestKeyspace1" "Events" "bogus_key")))
+  (is (= {} (toga.core/get "Events" "bogus_key"))))
 
 (deftest getting-empty-record-with-nonexistent-column-family
-  (is (= {} (get-record "CassandraClojureTestKeyspace1" "fake_column_family" "bogus_key")))
-  (is (= {} (get-record "fake_column_family" "bogus_key"))))
+  (is (= {} (toga.core/get "CassandraClojureTestKeyspace1" "fake_column_family" "bogus_key")))
+  (is (= {} (toga.core/get "fake_column_family" "bogus_key"))))
 
 (deftest getting-existing-record
   (insert "Subscribers" "colin" "full_name" "Colin Jones")
   (insert "Subscribers" "colin" "location" "Chicagoland")
 
-  (let [colin (get-record "Subscribers" "colin")]
+  (let [colin (toga.core/get "Subscribers" "colin")]
     (is (= "Colin Jones" (colin "full_name")))
     (is (= "Chicagoland" (colin "location")))))
 
 (deftest deleting-a-record
   (insert "Subscribers" "kathy" "full_name" "Kathy Jones")
-  (is (= {"full_name" "Kathy Jones"} (get-record "Subscribers" "kathy")))
+  (is (= {"full_name" "Kathy Jones"} (toga.core/get "Subscribers" "kathy")))
   (delete-record "Subscribers" "kathy")
-  (is (= {} (get-record "Subscribers" "kathy"))))
+  (is (= {} (toga.core/get "Subscribers" "kathy"))))
 
 (deftest inserting-a-record
   (insert "Subscribers" "oscar" {"full_name" "Oscar Jones", "location" "Chicagoland"})
-  (let [oscar (get-record "Subscribers" "oscar")]
+  (let [oscar (toga.core/get "Subscribers" "oscar")]
     (is (= {"full_name" "Oscar Jones",
-            "location", "Chicagoland"} (get-record "Subscribers" "oscar")))))
+            "location", "Chicagoland"} (toga.core/get "Subscribers" "oscar")))))
 
 ; NOTE: this will only work as you'd expect using an order-preserving partitioner
 ;         (set up in the Cassandra conf/storage-conf.xml)
@@ -94,7 +95,7 @@
                              "state" "IL"
                              "zip" "60060"}}]
       (insert "People" "molly" molly)
-      (is (= molly (get-record "People" "molly")))))
+      (is (= molly (toga.core/get "People" "molly")))))
 
   (deftest multiple-supercolumns
     (let [colin {"mailing" {"city" "Libertyville"
@@ -103,4 +104,4 @@
                  "email" {"domain" "8thlight.com"
                           "user" "colin"}}]
       (insert "People" "colin" colin)
-      (is (= colin (get-record "People" "colin"))))))
+      (is (= colin (toga.core/get "People" "colin"))))))

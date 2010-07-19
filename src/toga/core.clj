@@ -1,4 +1,5 @@
 (ns toga.core
+  (:refer-clojure :exclude (get))
   (:use toga.columns)
   (:import
     (org.apache.cassandra.thrift
@@ -130,9 +131,9 @@
 ;       Is that something there's a genuine use case for?
 ;       Wanted to add it as metadata on the column value, but alas,
   ;       strings aren't proper Clojure objects with metadata
-(defn get-record
+(defn get
   "Get a record as a map of column names to values"
-  ([column-family key] (get-record *keyspace* column-family key))
+  ([column-family key] (get *keyspace* column-family key))
   ([keyspace column-family k]
      (reduce
        (fn [x y] (conj x (to-map-entry y)))

@@ -1,4 +1,5 @@
 (ns toga.test-helper
+  (:refer-clojure :exclude (get))
   (:use toga.core
         clojure.test)
   (:import (org.apache.thrift.transport TTransportException)))
