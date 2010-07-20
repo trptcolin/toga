@@ -4,14 +4,13 @@
         toga.test-helper
         clojure.test))
 
-(test-cassandra cassandra-is-running)
-
 (use-fixtures :each
   (fn [f]
-    (with-client ["localhost" 9160]
-      (clear-keyspace "CassandraClojureTestKeyspace1")
-      (in-keyspace "CassandraClojureTestKeyspace1"
-        (f)))))
+    (warn-on-unavailable
+      (with-client ["localhost" 9160]
+        (clear-keyspace "CassandraClojureTestKeyspace1")
+        (in-keyspace "CassandraClojureTestKeyspace1"
+          (f))))))
 
 (deftest getting-record-with-client-and-keyspace
   (with-client ["localhost" 9160 "CassandraClojureTestKeyspace1"]

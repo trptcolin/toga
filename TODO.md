@@ -6,6 +6,7 @@ Suggestions here are welcome via GitHub message or email (trptcolin@gmail.com)
 Coming Soon
 =====
 
+* Per-action ConsistencyLevel
 * Gets over ColumnRanges
 * Failover
 * Connection pooling
