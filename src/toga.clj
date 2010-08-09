@@ -14,14 +14,15 @@
 (def *client*)
 (def *keyspace*)
 
-(defmacro with-client [[host port keyspace] & body]
-  `(let [socket# (TSocket. ~host ~port)
-         protocol# (TBinaryProtocol. socket#)]
-     (binding [*client* (Cassandra$Client. protocol#)
-               *keyspace* ~keyspace]
-       (with-open [transport# socket#]
-         (.open transport#)
-         ~@body))))
+(defmacro with-client [client & body]
+  (let [{:keys [host port keyspace]} client]
+    `(let [socket# (TSocket. ~host ~port)
+           protocol# (TBinaryProtocol. socket#)]
+       (binding [*client* (Cassandra$Client. protocol#)
+                 *keyspace* ~keyspace]
+         (with-open [transport# socket#]
+           (.open transport#)
+           ~@body)))))
 
 (defmacro in-keyspace [keyspace & body]
   `(binding [*keyspace* ~keyspace]

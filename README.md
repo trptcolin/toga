@@ -51,14 +51,14 @@ not the case on your machine, you'll need to make it so to use the example. (See
 the articles The result is that we insert a Column with the name "full_name" and
 the value "Colin Jones", under the key "colin".
 
-    (with-client ["localhost" 9160]
+    (with-client {:host "localhost" :port 9160}
       (insert "TestKeyspace" "People" "colin" "full_name" "Colin Jones"))
 
 While this is pretty simple, obviously we'll often want to insert multiple
 related columns at once in a given ColumnFamily.  We can do that by using a
 map rather than a key and value:
 
-    (with-client ["localhost" 9160]
+    (with-client {:host "localhost" :port 9160}
       (insert "TestKeyspace" "People" "colin" {"full_name" "Colin Jones"
                                                "company" "8th Light"}))
 
@@ -66,13 +66,13 @@ Of course, it may be inconvenient to have to repeat the Keyspace over and over
 when an entire application will likely access only a single namespace. There
 is an easier way that'll allow us to avoid this repetition:
 
-    (with-client ["localhost" 9160 "TestKeyspace"]
+    (with-client {:host "localhost" :port 9160 :keyspace "TestKeyspace"}
       (insert "People" "colin" {"full_name" "Colin Jones"
                                 "company" "8th Light"}))
 
 Alternatively, to allow switching keyspaces without re-creating a client:
 
-    (with-client ["localhost" 9160]
+    (with-client {:host "localhost" :port 9160}
       (in-keyspace "TestKeyspace"
         (insert "People" "colin" {"full_name" "Colin Jones"
                                   "company" "8th Light"})))
@@ -80,7 +80,7 @@ Alternatively, to allow switching keyspaces without re-creating a client:
 I think at this point we have covered insertion pretty well, right? How about
 pulling things back out of the datastore:
 
-    (with-client ["localhost" 9160 "TestKeyspace"]
+    (with-client {:host "localhost" :port 9160 :keyspace "TestKeyspace"}
       (toga/get "People" "colin"))
 
 Cassandra doesn't use the terminology "record" (that I'm aware of), but here we

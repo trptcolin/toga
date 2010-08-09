@@ -7,13 +7,13 @@
 (use-fixtures :each
   (fn [f]
     (warn-on-unavailable
-      (with-client ["localhost" 9160]
+      (with-client {:host "localhost" :port 9160}
         (clear-keyspace "CassandraClojureTestKeyspace1")
         (in-keyspace "CassandraClojureTestKeyspace1"
           (f))))))
 
 (deftest getting-record-with-client-and-keyspace
-  (with-client ["localhost" 9160 "CassandraClojureTestKeyspace1"]
+  (with-client {:host "localhost" :port 9160 :keyspace "CassandraClojureTestKeyspace1"}
     (insert "Subscribers" "colin" "full_name" "Colin Jones")
     (let [colin (toga/get "Subscribers" "colin")]
       (is (= "Colin Jones" (colin "full_name"))))))
