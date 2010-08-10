@@ -1,5 +1,5 @@
 (ns toga.core-test
-  (:require [toga])
+  (:require [toga.core])
   (:use toga.test-helper
         clojure.test))
 
