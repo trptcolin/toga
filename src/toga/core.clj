@@ -14,6 +14,14 @@
 (def *client*)
 (def *keyspace*)
 
+(defn make-socket [options]
+  (let [{:keys [host port]} options]
+    (TSocket. host port)))
+
+(defn make-client [socket]
+  (let [protocol (TBinaryProtocol. socket)]
+    (Cassandra$Client. protocol)))
+
 (defmacro with-client [client & body]
   (let [{:keys [host port keyspace]} client]
     `(let [socket# (TSocket. ~host ~port)

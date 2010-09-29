@@ -1,7 +1,28 @@
 (ns toga.core-test
   (:require [toga.core :as toga])
-  (:use toga.test-helper
-        clojure.test))
+  (:use [toga.test-helper]
+        [lazytest.describe :only (describe given it with)]
+        [lazytest.context.stateful :only (stateful-fn-context)]
+        [clojure.test]))
+
+(describe "inserting and getting a simple record"
+  (toga/with-client {:host "localhost" :port 9160 :keyspace "CassandraClojureTestKeyspace1"}
+    (toga/insert "Subscribers" "colin" "full_name" "Colin Jones")
+    (let [colin (toga/get "Subscribers" "colin")]
+      (it "pulls the right record back out"
+        (= "Colin Jones" (colin "full_name"))))))
+
+;;;; this is going to cause a lot more churn, so we'll save it for next iteration
+;; (def datastore-context
+;;   (stateful-fn-context
+;;     (fn []
+;;       (let [socket (toga/make-socket {:host "localhost" :port 9160})
+;;             client (toga/make-client socket)]
+;;         (.open socket)
+;;         (binding [toga/*client* client]
+;;           (toga/clear-keyspace "CassandraClojureTestKeyspace1"))
+;;         socket))
+;;     (fn [socket] (.close socket))))
 
 (use-fixtures :each
   (fn [f]
@@ -11,11 +32,9 @@
         (toga/in-keyspace "CassandraClojureTestKeyspace1"
           (f))))))
 
-(deftest getting-record-with-client-and-keyspace
-  (toga/with-client {:host "localhost" :port 9160 :keyspace "CassandraClojureTestKeyspace1"}
-    (toga/insert "Subscribers" "colin" "full_name" "Colin Jones")
-    (let [colin (toga/get "Subscribers" "colin")]
-      (is (= "Colin Jones" (colin "full_name"))))))
+;; (describe "getting all keyspaces"
+;;   (with [datastore-context]
+;;     (it (some #{"CassandraClojureTestKeyspace1"} (toga/get-all-keyspaces)))))
 
 (deftest getting-all-keyspaces
   (let [keyspaces (toga/get-all-keyspaces)]

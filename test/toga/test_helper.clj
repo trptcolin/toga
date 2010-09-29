@@ -1,5 +1,4 @@
 (ns toga.test-helper
-  (:use clojure.test)
   (:import (org.apache.thrift.transport TTransportException)))
 
 (defmacro warn-on-unavailable [& body]
