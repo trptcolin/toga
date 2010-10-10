@@ -12,7 +12,6 @@
 (def *consistency-level* ConsistencyLevel/ONE)
 
 (def *client*)
-(def *keyspace*)
 
 (defn make-socket [options]
   (let [{:keys [host port]} options]
@@ -22,20 +21,25 @@
   (let [protocol (TBinaryProtocol. socket)]
     (Cassandra$Client. protocol)))
 
-(defmacro with-client [client & body]
-  (let [{:keys [host port keyspace]} client]
-    `(let [socket# (TSocket. ~host ~port)
-           protocol# (TBinaryProtocol. socket#)]
-       (binding [*client* (Cassandra$Client. protocol#)
-                 *keyspace* ~keyspace]
-         (with-open [transport# socket#]
-           (.open transport#)
-           ~@body)))))
+(defn open-client [options]
+	(let [host 			(:host options)
+				port 			(:port options)
+			  socket 		(TSocket. host port)
+				protocol	(TBinaryProtocol. socket)
+				client 		(Cassandra$Client. protocol)]
+		(.open socket)
+		client))
 
-(defmacro in-keyspace [keyspace & body]
-  `(binding [*keyspace* ~keyspace]
-     ~@body))
+(defn get-transport [client]
+	(-> client
+			(.getInputProtocol)
+			(.getTransport)))
 
+(defmacro with-client [options & body]
+	`(let [client# (open-client ~options)]
+		 (binding [*client* 	client#]
+			 (with-open [transport# (get-transport client#)]
+				 ~@body))))
 
 (defn- make-slice-range []
   (doto (SliceRange.)
@@ -95,8 +99,6 @@
   (fn [& args] (type (last args))))
 
 (defmethod insert clojure.lang.IPersistentMap
-  ([family k value-map]
-   (insert *keyspace* family k value-map))
   ([keyspace family k value-map]
      (.batch_mutate *client*
        keyspace
@@ -104,8 +106,6 @@
        *consistency-level*)))
 
 (defmethod insert :default
-  ([family k col value]
-   (insert *keyspace* family k col value))
   ([keyspace family k col value]
    (.insert *client*
      keyspace
@@ -117,14 +117,12 @@
 
 ; TODO: cache keyspaces to eliminate database calls?
 (defn- column-family-exists?
-  ([column-family] (column-family-exists? *keyspace* column-family))
-  ([keyspace column-family]
+ ([keyspace column-family]
    (some #{column-family}
      (keys (describe-keyspace keyspace)))))
 
 (defn- get-columns
-  ([column-family k] (get-columns *keyspace* column-family k))
-  ([keyspace column-family k]
+ ([keyspace column-family k]
    (if (column-family-exists? keyspace column-family)
      (map
        to-map-entry
@@ -142,16 +140,14 @@
   ;       strings aren't proper Clojure objects with metadata
 (defn get
   "Get a record as a map of column names to values"
-  ([column-family key] (get *keyspace* column-family key))
-  ([keyspace column-family k]
+	([keyspace column-family k]
      (reduce
        (fn [x y] (conj x (to-map-entry y)))
        {}
        (get-columns keyspace column-family k))))
 
 (defn delete-record
-  ([column-family k] (delete-record *keyspace* column-family k))
-  ([keyspace column-family k]
+	([keyspace column-family k]
    (.remove *client*
      keyspace
      k
@@ -161,8 +157,7 @@
 
 (defn clear-column-family
   "Use with extreme caution. It will blow away all data for a ColumnFamily"
-  ([column-family] (clear-column-family *keyspace* column-family))
-  ([keyspace column-family]
+	([keyspace column-family]
    (doall
      (map
        (fn [record] (delete-record keyspace column-family (.getKey record)))
