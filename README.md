@@ -3,6 +3,8 @@ Toga
 
 A Cassandra client wrapper for Clojure
 
+Oh, right. You probably shouldn't use this, because afaik it's never been in production. I'd try http://clojurecassandra.info/ instead.
+
 
 What is Toga?
 =====
